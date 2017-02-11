@@ -1,3 +1,5 @@
+ttt
+
 #include <windows.h>
 #include "VBSPlugin.h"
 

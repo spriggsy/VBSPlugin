@@ -1,3 +1,5 @@
+yyy
+
 #define VBSPLUGIN_EXPORT __declspec(dllexport)
 
 VBSPLUGIN_EXPORT void WINAPI RegisterCommandFnc(void *executeCommandFnc);
