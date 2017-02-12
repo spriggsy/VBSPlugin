@@ -73,7 +73,7 @@
       <ProgramDataBaseFileName>.\Release/</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalIncludeDirectories>C:\Users\User\Documents\GitHub\VBSPlugin\Serial;C:\Users\User\Documents\Visual Studio 2013\Libarys\Boost\include\boost-1_61;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Spriggsy\Documents\GitHub\VBSPlugin\Serial;C:\Users\User\Documents\GitHub\VBSPlugin\Serial;C:\Users\User\Documents\Visual Studio 2013\Libarys\Boost\include\boost-1_61;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

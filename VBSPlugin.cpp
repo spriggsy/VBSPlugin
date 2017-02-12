@@ -53,17 +53,6 @@ typedef int (WINAPI * ExecuteCommandType)(const char *command, char *result, int
 // Command function definition
 ExecuteCommandType ExecuteCommand = NULL;
 
-
-
-void task1(string msg){
-
-	cout << "task1 says: " << msg << endl;
-
-
-
-
-}
-
 const char *sendX(const char *input)
 {
 	// The output result
@@ -322,7 +311,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 					szBuffer[dwBytesRead] = '\0';
 
 					// Display the data
-					printf("%s", szBuffer);
+					printf("heres the string: %s", szBuffer);
 
 					
 				}
