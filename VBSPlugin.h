@@ -1,4 +1,4 @@
-yyy
+
 
 #define VBSPLUGIN_EXPORT __declspec(dllexport)
 

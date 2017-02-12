@@ -1,5 +1,3 @@
-ttt
-
 #include <windows.h>
 #include "VBSPlugin.h"
 
@@ -8,7 +6,6 @@ ttt
 #include <thread>
 #include <string>
 #include "SimpleIni.h"					// used to read and write ini file
-
 
 #include <iostream>
 #include <fstream>
@@ -30,8 +27,6 @@ CSimpleIniA ini;
 CSerial test;
 
 
-
-
 bool connected = false;  //is the 
 
 string pathString;
@@ -41,7 +36,6 @@ int B3 = 0;
 int B4 = 0;
 int B5 = 0;
 int Calibrating = 0;     // int sent from head-tracker
-
 
 int com;
 int baud;
@@ -67,53 +61,66 @@ DWORD WINAPI XYZ(LPVOID lpParam)
 
 
 
+
+
+
+
+
+
 	while (true){
 
-		if (test.IsOpened()){
-
-			test.ReadData(buffer, 1);
-
-			if (_stricmp("<", buffer) == 0)
-			{
-				synced = true;
-				dataString.clear();
-				
-				
 
 
-			};
+		if (connected){
 
-			if (((_stricmp("\r", buffer) == 0) || (_stricmp("\n", buffer) == 0) || (_stricmp("<", buffer) == 0) || (_stricmp(">", buffer) == 0) || (_stricmp(",", buffer) == 0) || (_stricmp(".", buffer) == 0) || (_stricmp("-", buffer) == 0) || (_stricmp("1", buffer) == 0) || (_stricmp("2", buffer) == 0) || (_stricmp("3", buffer) == 0) || (_stricmp("4", buffer) == 0) || (_stricmp("5", buffer) == 0) || (_stricmp("6", buffer) == 0) || (_stricmp("7", buffer) == 0) || (_stricmp("8", buffer) == 0) || (_stricmp("9", buffer) == 0) || (_stricmp("0", buffer) == 0)) && synced == true)
-			{
-				dataString += buffer;
+			if (!test.IsOpened()){
 
-				if ((_stricmp(">", buffer) == 0))
-				{
-					// end of packet
-					synced = false;
-					cout << "dataString: " << dataString << std::endl;
+				(test.Open(5, 115200));
 
-					dataString.clear();
-				};
-				
 			}
- 
 
 
 
 
+			if (test.IsOpened()){
+
+				test.ReadData(buffer, 1);
+
+				if (_stricmp("<", buffer) == 0)
+				{
+					synced = true;
+					dataString.clear();
+
+				};
+
+				if (((_stricmp("\r", buffer) == 0) || (_stricmp("\n", buffer) == 0) || (_stricmp("<", buffer) == 0) || (_stricmp(">", buffer) == 0) || (_stricmp(",", buffer) == 0) || (_stricmp(".", buffer) == 0) || (_stricmp("-", buffer) == 0) || (_stricmp("1", buffer) == 0) || (_stricmp("2", buffer) == 0) || (_stricmp("3", buffer) == 0) || (_stricmp("4", buffer) == 0) || (_stricmp("5", buffer) == 0) || (_stricmp("6", buffer) == 0) || (_stricmp("7", buffer) == 0) || (_stricmp("8", buffer) == 0) || (_stricmp("9", buffer) == 0) || (_stricmp("0", buffer) == 0)) && synced == true)
+				{
+					dataString += buffer;
+
+					if ((_stricmp(">", buffer) == 0))
+					{
+						// end of packet
+						synced = false;
+						cout << "dataString: " << dataString << std::endl;
+
+						dataString.clear();
+					};
+
+				}
+
+
+			}
+
+
+			else{
+
+				cout << "Not Connected" << endl;
+				dataString.clear();
+			}
 
 
 		}
-
-		else{
-
-			cout << "Not Connected" << endl;
-			dataString.clear();
-		}
-
 	}
-
 	return 0;
 }
 
@@ -231,13 +238,10 @@ const char *CALIBRATE(const char *input)
 const char *CONNECT(const char *input)
 {
 
+	connected = true;
 
-	if (test.Open(5, 115200))
-	{
-		connected = true;
-		
 
-	}
+
 
 	return NULL;
 }
