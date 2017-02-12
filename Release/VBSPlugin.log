@@ -1,9 +1,9 @@
-﻿Build started 12/02/2017 08:08:25.
+﻿Build started 12/02/2017 09:14:03.
      1>Project "C:\Users\User\Documents\GitHub\VBSPlugin\VBSPlugin.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         D:\Programs\Vis Studio\VC\bin\CL.exe /c /I"C:\Users\User\Documents\Visual Studio 2013\Libarys\Boost\include\boost-1_61" /Zi /nologo /W3 /WX- /O2 /Ob1 /Oy- /D WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D VBSPLUGIN_EXPORTS /D _VC80_UPGRADE=0x0600 /D _WINDLL /D _MBCS /GF /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\Release/" /Fd".\Release/vc120.pdb" /Gd /TP /analyze- /errorReport:prompt VBSPlugin.cpp
+         D:\Programs\Vis Studio\VC\bin\CL.exe /c /IC:\Users\User\Documents\GitHub\VBSPlugin\Serial /I"C:\Users\User\Documents\Visual Studio 2013\Libarys\Boost\include\boost-1_61" /Zi /nologo /W3 /WX- /O2 /Ob1 /Oy- /D WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D VBSPLUGIN_EXPORTS /D _VC80_UPGRADE=0x0600 /D _WINDLL /D _MBCS /GF /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\Release/" /Fd".\Release/vc120.pdb" /Gd /TP /analyze- /errorReport:prompt VBSPlugin.cpp
          VBSPlugin.cpp
-     1>VBSPlugin.cpp(321): warning C4996: 'freopen': This function or variable may be unsafe. Consider using freopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+     1>VBSPlugin.cpp(372): warning C4996: 'freopen': This function or variable may be unsafe. Consider using freopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  D:\Programs\Vis Studio\VC\include\stdio.h(226) : see declaration of 'freopen'
        Link:
          D:\Programs\Vis Studio\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:".\Release/VBSPlugin.dll" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\Users\User\Documents\Visual Studio 2013\Libarys\Boost\lib" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /DEF:".\VBSPlugin.def" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\Release/VBSPlugin.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\Release/VBSPlugin.lib" /MACHINE:X86 /SAFESEH /DLL .\Release/Serial.obj
@@ -15,4 +15,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.51
+Time Elapsed 00:00:02.42

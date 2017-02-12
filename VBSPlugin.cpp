@@ -1,6 +1,7 @@
 #include <windows.h>
 #include "VBSPlugin.h"
 
+#include <tchar.h>
 #include "Serial.h"	
 
 #include <thread>
@@ -11,6 +12,11 @@
 #include <fstream>
 #include <conio.h>
 #include <stdio.h>
+
+enum { EOF_Char = 27 };
+
+CSerial serial;
+LONG    lLastError = ERROR_SUCCESS;
 
 
 using namespace std;
@@ -24,8 +30,6 @@ float Z = 0.0;
 int   Data_Of_Thread_1;
 
 CSimpleIniA ini;
-CSerial test;
-
 
 bool connected = false;  //is the 
 
@@ -50,79 +54,8 @@ typedef int (WINAPI * ExecuteCommandType)(const char *command, char *result, int
 ExecuteCommandType ExecuteCommand = NULL;
 
 
-DWORD WINAPI XYZ(LPVOID lpParam)
-{
-
-	bool synced = false;
-
-	string dataString;
-
-	char* buffer = new char[1]();
 
 
-
-
-
-
-
-
-
-	while (true){
-
-
-
-		if (connected){
-
-			if (!test.IsOpened()){
-
-				(test.Open(5, 115200));
-
-			}
-
-
-
-
-			if (test.IsOpened()){
-
-				test.ReadData(buffer, 1);
-
-				if (_stricmp("<", buffer) == 0)
-				{
-					synced = true;
-					dataString.clear();
-
-				};
-
-				if (((_stricmp("\r", buffer) == 0) || (_stricmp("\n", buffer) == 0) || (_stricmp("<", buffer) == 0) || (_stricmp(">", buffer) == 0) || (_stricmp(",", buffer) == 0) || (_stricmp(".", buffer) == 0) || (_stricmp("-", buffer) == 0) || (_stricmp("1", buffer) == 0) || (_stricmp("2", buffer) == 0) || (_stricmp("3", buffer) == 0) || (_stricmp("4", buffer) == 0) || (_stricmp("5", buffer) == 0) || (_stricmp("6", buffer) == 0) || (_stricmp("7", buffer) == 0) || (_stricmp("8", buffer) == 0) || (_stricmp("9", buffer) == 0) || (_stricmp("0", buffer) == 0)) && synced == true)
-				{
-					dataString += buffer;
-
-					if ((_stricmp(">", buffer) == 0))
-					{
-						// end of packet
-						synced = false;
-						cout << "dataString: " << dataString << std::endl;
-
-						dataString.clear();
-					};
-
-				}
-
-
-			}
-
-
-			else{
-
-				cout << "Not Connected" << endl;
-				dataString.clear();
-			}
-
-
-		}
-	}
-	return 0;
-}
 
  
 
@@ -238,20 +171,41 @@ const char *CALIBRATE(const char *input)
 const char *CONNECT(const char *input)
 {
 
-	connected = true;
+	// Attempt to open the serial port (COM1)
+	lLastError = serial.Open(_T("COM5"), 0, 0, false);
+	if (lLastError != ERROR_SUCCESS)
+		cout << serial.GetLastError() << " : " << _T("Unable to open COM 5-port") << endl;
+		
 
+	// Setup the serial port (9600,8N1, which is the default setting)
+	lLastError = serial.Setup(CSerial::EBaud115200, CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
+	if (lLastError != ERROR_SUCCESS)
+		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port setting") << endl;
 
+	// Register only for the receive event
+	lLastError = serial.SetMask(CSerial::EEventBreak |
+		CSerial::EEventCTS |
+		CSerial::EEventDSR |
+		CSerial::EEventError |
+		CSerial::EEventRing |
+		CSerial::EEventRLSD |
+		CSerial::EEventRecv);
+	if (lLastError != ERROR_SUCCESS)
+		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port event mask") << endl;
+
+	// Use 'non-blocking' reads, because we don't know how many bytes
+	// will be received. This is normally the most convenient mode
+	// (and also the default mode for reading data).
+	lLastError = serial.SetupReadTimeouts(CSerial::EReadTimeoutNonblocking);
+	if (lLastError != ERROR_SUCCESS)
+		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port read timeout.") << endl;
 
 
 	return NULL;
 }
 const char *DISCONNECT(const char *input)
 {
-	
-	if (test.Close()){
-		connected = false;
-	}
-	// Return whatever is in the result
+
 	return NULL;
 }
 // Function that will register the ExecuteCommand function of the engine
@@ -315,8 +269,105 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD fdwReason, LPVOID lpvReserved)
    {
    case DLL_PROCESS_ATTACH:
    {
-							  HANDLE   Hthread1 = CreateThread(NULL, 0, XYZ, &Data_Of_Thread_1, 0, NULL);
 
+							  /*
+							
+							  // Keep reading data, until an EOF (CTRL-Z) has been received
+							  bool fContinue = true;
+							  do
+							  {
+								  // Wait for an event
+								  lLastError = serial.WaitEvent();
+								  if (lLastError != ERROR_SUCCESS)
+									  return ::ShowError(serial.GetLastError(), _T("Unable to wait for a COM-port event."));
+
+								  // Save event
+								  const CSerial::EEvent eEvent = serial.GetEventType();
+
+								  // Handle break event
+								  if (eEvent & CSerial::EEventBreak)
+								  {
+									  printf("\n### BREAK received ###\n");
+								  }
+
+								  // Handle CTS event
+								  if (eEvent & CSerial::EEventCTS)
+								  {
+									  printf("\n### Clear to send %s ###\n", serial.GetCTS() ? "on" : "off");
+								  }
+
+								  // Handle DSR event
+								  if (eEvent & CSerial::EEventDSR)
+								  {
+									  printf("\n### Data set ready %s ###\n", serial.GetDSR() ? "on" : "off");
+								  }
+
+								  // Handle error event
+								  if (eEvent & CSerial::EEventError)
+								  {
+									  printf("\n### ERROR: ");
+									  switch (serial.GetError())
+									  {
+									  case CSerial::EErrorBreak:		printf("Break condition");			break;
+									  case CSerial::EErrorFrame:		printf("Framing error");			break;
+									  case CSerial::EErrorIOE:		printf("IO device error");			break;
+									  case CSerial::EErrorMode:		printf("Unsupported mode");			break;
+									  case CSerial::EErrorOverrun:	printf("Buffer overrun");			break;
+									  case CSerial::EErrorRxOver:		printf("Input buffer overflow");	break;
+									  case CSerial::EErrorParity:		printf("Input parity error");		break;
+									  case CSerial::EErrorTxFull:		printf("Output buffer full");		break;
+									  default:						printf("Unknown");					break;
+									  }
+									  printf(" ###\n");
+								  }
+
+								  // Handle ring event
+								  if (eEvent & CSerial::EEventRing)
+								  {
+									  printf("\n### RING ###\n");
+								  }
+
+								  // Handle RLSD/CD event
+								  if (eEvent & CSerial::EEventRLSD)
+								  {
+									  printf("\n### RLSD/CD %s ###\n", serial.GetRLSD() ? "on" : "off");
+								  }
+
+								  // Handle data receive event
+								  if (eEvent & CSerial::EEventRecv)
+								  {
+									  // Read data, until there is nothing left
+									  DWORD dwBytesRead = 0;
+									  char szBuffer[101];
+									  do
+									  {
+										  // Read data from the COM-port
+										  lLastError = serial.Read(szBuffer, sizeof(szBuffer)-1, &dwBytesRead);
+										  if (lLastError != ERROR_SUCCESS)
+											  return ::ShowError(serial.GetLastError(), _T("Unable to read from COM-port."));
+
+										  if (dwBytesRead > 0)
+										  {
+											  // Finalize the data, so it is a valid string
+											  szBuffer[dwBytesRead] = '\0';
+
+											  // Display the data
+											  printf("%s", szBuffer);
+
+											  // Check if EOF (CTRL+'[') has been specified
+											  if (strchr(szBuffer, EOF_Char))
+												  fContinue = false;
+										  }
+									  } while (dwBytesRead == sizeof(szBuffer)-1);
+								  }
+							  } while (fContinue);
+
+							  // Close the port again
+							  serial.Close();
+
+
+
+							  */
 							  AllocConsole();
 							  freopen("CONOUT$", "w", stdout);
 

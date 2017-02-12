@@ -14,7 +14,7 @@
     <ClCompile Include="VBSPlugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Serial.cpp">
+    <ClCompile Include="Serial\Serial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,10 +27,10 @@
     <ClInclude Include="VBSPlugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Serial.h">
+    <ClInclude Include="SimpleIni.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleIni.h">
+    <ClInclude Include="Serial\Serial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
