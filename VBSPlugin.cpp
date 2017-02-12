@@ -4,10 +4,10 @@
 #include <tchar.h>
 #include "Serial.h"	
 
-#include <thread>
+#include <vector>
 #include <string>
 #include "SimpleIni.h"					// used to read and write ini file
-
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <conio.h>
@@ -21,7 +21,8 @@ LONG    lLastError = ERROR_SUCCESS;
 
 using namespace std;
 
-
+string dataString;
+bool synced;
 bool calib = false;
 float X = 0.0;
 float Y = 0.0;
@@ -45,6 +46,25 @@ int com;
 int baud;
 int HEADING_OFF = 0;
 
+
+
+
+void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+	std::stringstream ss;
+	ss.str(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		elems.push_back(item);
+	}
+}
+
+
+
+std::vector<std::string> split(const std::string &s, char delim) {
+	std::vector<std::string> elems;
+	split(s, delim, elems);
+	return elems;
+	}
 
 
 // Command function declaration
@@ -223,12 +243,10 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 
 	if (serial.IsOpen())
 	{
-		cout << "serial is open: "<< endl;
 
 		// Wait for an event
 		lLastError = serial.WaitEvent();
 		if (lLastError != ERROR_SUCCESS){
-
 
 			printf("\n### Unable to wait for a COM-port event. %s ###\n", serial.GetLastError());
 		}
@@ -307,10 +325,52 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 					// Finalize the data, so it is a valid string
 					szBuffer[dwBytesRead] = '\0';
 
-					// Display the data
-					printf("heres the string: %s\n", szBuffer);
+					if (_stricmp("<", szBuffer) == 0)
 
-					
+
+						 {
+						synced = true;
+						};
+
+
+
+					if ((_stricmp("<", szBuffer) == 0) || (_stricmp(">", szBuffer) == 0) || (_stricmp(",", szBuffer) == 0) || (_stricmp(".", szBuffer) == 0) || (_stricmp("-", szBuffer) == 0) || (_stricmp("1", szBuffer) == 0) || (_stricmp("2", szBuffer) == 0) || (_stricmp("3", szBuffer) == 0) || (_stricmp("4", szBuffer) == 0) || (_stricmp("5", szBuffer) == 0) || (_stricmp("6", szBuffer) == 0) || (_stricmp("7", szBuffer) == 0) || (_stricmp("8", szBuffer) == 0) || (_stricmp("9", szBuffer) == 0) || (_stricmp("0", szBuffer) == 0) && (synced == true))
+						 {
+													//add ">" to dataString 
+							dataString += szBuffer;
+							if ((_stricmp(">", szBuffer) == 0))
+							 {
+								// end of packet 
+								synced = false;
+
+								vector<string> x = split(dataString, ',');
+								if (x.size() > 9)
+								{
+									try 
+									{
+
+									X = stof(x[1]);
+									Y = stof(x[2]);
+									Z = stof(x[3]);
+									B1 = stoi(x[4]);
+									B2 = stoi(x[5]);
+									B3 = stoi(x[6]);
+									B4 = stoi(x[7]);
+									B5 = stoi(x[8]);
+									Calibrating = stoi(x[9]);
+									}
+									catch (...) {
+									};
+
+									cout << "dataString Output X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
+
+								}
+
+								dataString.clear();
+							};
+
+							}
+	
 				}
 			} while (dwBytesRead == sizeof(szBuffer)-1);
 		}
