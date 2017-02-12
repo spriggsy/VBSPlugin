@@ -6,6 +6,10 @@
 
 #include <vector>
 #include <string>
+
+
+
+#include <sstream> 
 #include "SimpleIni.h"					// used to read and write ini file
 #include <sstream>
 #include <iostream>
@@ -45,6 +49,22 @@ int Calibrating = 0;     // int sent from head-tracker
 int com;
 int baud;
 int HEADING_OFF = 0;
+
+
+void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+	std::stringstream ss;
+	ss.str(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		elems.push_back(item);
+	}
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+	std::vector<std::string> elems;
+	split(s, delim, elems);
+	return elems;
+}
 
 
 
@@ -326,6 +346,54 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 					szBuffer[dwBytesRead] = '\0';
 
 					if (_stricmp("<", szBuffer) == 0)
+<<<<<<< HEAD
+=======
+					{						
+						synced = true;
+					};
+ 
+					if ((_stricmp("<", szBuffer) == 0) || (_stricmp(">", szBuffer) == 0) || (_stricmp(",", szBuffer) == 0) || (_stricmp(".", szBuffer) == 0) || (_stricmp("-", szBuffer) == 0) || (_stricmp("1", szBuffer) == 0) || (_stricmp("2", szBuffer) == 0) || (_stricmp("3", szBuffer) == 0) || (_stricmp("4", szBuffer) == 0) || (_stricmp("5", szBuffer) == 0) || (_stricmp("6", szBuffer) == 0) || (_stricmp("7", szBuffer) == 0) || (_stricmp("8", szBuffer) == 0) || (_stricmp("9", szBuffer) == 0) || (_stricmp("0", szBuffer) == 0) && (synced == true))
+					{
+
+						//add ">" to dataString
+						dataString += szBuffer;
+
+						if ((_stricmp(">", szBuffer) == 0))
+						{
+							// end of packet
+							synced = false;
+
+							vector<string> x = split(dataString, ',');
+
+							if (x.size() > 9 )
+							{
+
+								try {
+									X = stof(x[1]);
+									Y = stof(x[2]);
+									Z = stof(x[3]);
+									B1 = stoi(x[4]);
+									B2 = stoi(x[5]);
+									B3 = stoi(x[6]);
+									B4 = stoi(x[7]);
+									B5 = stoi(x[8]);
+									Calibrating = stoi(x[9]);
+								}
+								catch (...) {
+
+								};
+								cout << "dataString X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
+							}
+
+							
+
+							dataString.clear();
+						};
+
+					}
+
+
+>>>>>>> origin/master
 
 
 						 {
@@ -381,7 +449,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 
 
 	}
-  //!}
+  
  
 
 // This function will be executed every time the script in the engine calls the script function "pluginFunction"
