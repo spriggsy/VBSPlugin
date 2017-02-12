@@ -196,10 +196,7 @@ const char *CONNECT(const char *input)
 		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port read timeout.") << endl;
 	 
 
-	//thread t1(task1, "Hello");
-	//t1.join();
-
-
+	 
 	
 	return NULL;
 }
@@ -293,7 +290,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 		{
 			// Read data, until there is nothing left
 			DWORD dwBytesRead = 0;
-			char szBuffer[101];
+			char szBuffer[2];
 			do
 			{
 				// Read data from the COM-port
@@ -311,7 +308,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 					szBuffer[dwBytesRead] = '\0';
 
 					// Display the data
-					printf("heres the string: %s", szBuffer);
+					printf("heres the string: %s\n", szBuffer);
 
 					
 				}
