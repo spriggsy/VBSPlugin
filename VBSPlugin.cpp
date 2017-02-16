@@ -2,43 +2,42 @@
 #include "VBSPlugin.h"
 
 #include <tchar.h>
-#include "Serial.h"	
+#include "Serial.h"						//Used fo the Serial port
 
 #include <vector>
+#include <algorithm>					//used for string replace function
 #include <string>
-
-
-
-#include <sstream> 
+#include "whereami.h"					// find path of DLL
 #include "SimpleIni.h"					// used to read and write ini file
 #include <sstream>
-#include <iostream>
+#include <iostream>						// needed for file access/creation
 #include <fstream>
 #include <conio.h>
 #include <stdio.h>
 
-enum { EOF_Char = 27 };
 
 CSerial serial;
+CSimpleIniA ini;
+
 LONG    lLastError = ERROR_SUCCESS;
 
 
 using namespace std;
 
+
 string dataString;
+string pathString;
 bool synced;
 bool calib = false;
+
 float X = 0.0;
 float Y = 0.0;
 float Z = 0.0;
 
 int   Data_Of_Thread_1;
 
-CSimpleIniA ini;
-
 bool connected = false;  //is the 
 
-string pathString;
 int B1 = 0;
 int B2 = 0;
 int B3 = 0;
@@ -46,11 +45,11 @@ int B4 = 0;
 int B5 = 0;
 int Calibrating = 0;     // int sent from head-tracker
 
-int com;
-int baud;
 int HEADING_OFF = 0;
+string com;
+int baud;
 
-
+//Function to split string at deliminator
 void split(const std::string &s, char delim, std::vector<std::string> &elems) {
 	std::stringstream ss;
 	ss.str(s);
@@ -65,26 +64,6 @@ std::vector<std::string> split(const std::string &s, char delim) {
 	split(s, delim, elems);
 	return elems;
 }
-
-
-
-
-void split(const std::string &s, char delim, std::vector<std::string> &elems) {
-	std::stringstream ss;
-	ss.str(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		elems.push_back(item);
-	}
-}
-
-
-
-std::vector<std::string> split(const std::string &s, char delim) {
-	std::vector<std::string> elems;
-	split(s, delim, elems);
-	return elems;
-	}
 
 
 // Command function declaration
@@ -134,9 +113,9 @@ const char *sendA(const char *input)
 	// The output result
 	static char result[128];
 
-		X = X + HEADING_OFF;
-		if (X > 360)  { X = X - 360; };
- 
+	X = X + HEADING_OFF;
+	if (X > 360)  { X = X - 360; };
+
 
 
 	sprintf_s(result, "['%i,%i,%i']", X, Y, Z);
@@ -194,28 +173,88 @@ const char *sendB5(const char *input)
 	// Return whatever is in the result
 	return result;
 }
+
+
+void replaceAll(std::string& str, const std::string& from, const std::string& to) {
+	if (from.empty())
+		return;
+	size_t start_pos = 0;
+	while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+		str.replace(start_pos, from.length(), to);
+		start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+	}
+}
+
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return true;
+}
+
+
 const char *CALIBRATE(const char *input)
 {
-	//int nBytesSent = serial.SendData("1", 1);
-	
+
+	int nBytesSent = serial.Write("1");  
+
 	// Return whatever is in the result
 	return NULL;
 }
 const char *CONNECT(const char *input)
 {
 
-	
+	//find path of DLL
+	char* path;
+	int length, dirname_length;
+	length = wai_getModulePath(NULL, 0, &dirname_length);
+	if (length > 0)
+	{
+		path = (char*)malloc(length + 1);
+		if (!path)
+			abort();
+		wai_getModulePath(path, length, &dirname_length);
+		path[length] = '\0';
+		string str(path);
+		pathString = str + ".ini";
+		replaceAll(pathString, "\\", "\\\\");
+		cout << pathString << endl;
+	}
 
-	// Attempt to open the serial port (COM1)
-	lLastError = serial.Open(_T("COM5"), 0, 0, false);
+	if (!std::ifstream(pathString))
+	{
+		// create ini file
+		ofstream outfile(pathString.c_str());
+
+		outfile << "[SETTINGS]" << endl;
+		outfile << "PORT = COM3" << endl;
+		outfile << "BAUD = 115200" << endl;
+		outfile << "HEADING_OFF = 0" << endl;
+		outfile << "GPS = 0" << endl;
+		outfile << "JPAD = 0" << endl;
+		outfile.close();
+	}
+ 
+	free(path);
+
+	// load settings from ini file
+	ini.LoadFile(pathString.c_str());
+
+	com = ini.GetValue("SETTINGS", "PORT", NULL);
+	baud = atoi(ini.GetValue("SETTINGS", "BAUD", NULL));
+	HEADING_OFF = atoi(ini.GetValue("SETTINGS", "HEADING_OFF", NULL));
+
+
+	// Attempt to open the serial port 
+	lLastError = serial.Open((com.c_str()), 0, 0, false);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to open COM 5-port") << endl;
-		
+		cout << serial.GetLastError() << " : " << _T("Unable to open port: ") << com << endl;
 
 	// Setup the serial port (9600,8N1, which is the default setting)
-	lLastError = serial.Setup(CSerial::EBaud115200, CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
+	lLastError = serial.Setup(CSerial::EBaudrate(baud), CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port setting") << endl;
+		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port baud: ") << baud  << endl;
 
 	// Register only for the receive event
 	lLastError = serial.SetMask(CSerial::EEventBreak |
@@ -234,10 +273,7 @@ const char *CONNECT(const char *input)
 	lLastError = serial.SetupReadTimeouts(CSerial::EReadTimeoutNonblocking);
 	if (lLastError != ERROR_SUCCESS)
 		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port read timeout.") << endl;
-	 
 
-	 
-	
 	return NULL;
 }
 const char *DISCONNECT(const char *input)
@@ -245,13 +281,13 @@ const char *DISCONNECT(const char *input)
 
 	// Close the port again
 	serial.Close();
-	printf("Close serial port\n");
+	
 	return NULL;
 }
 // Function that will register the ExecuteCommand function of the engine
 VBSPLUGIN_EXPORT void WINAPI RegisterCommandFnc(void *executeCommandFnc)
 {
-  ExecuteCommand = (ExecuteCommandType)executeCommandFnc;
+	ExecuteCommand = (ExecuteCommandType)executeCommandFnc;
 }
 
 // This function will be executed every simulation step (every frame) and took a part in the simulation procedure.
@@ -259,7 +295,7 @@ VBSPLUGIN_EXPORT void WINAPI RegisterCommandFnc(void *executeCommandFnc)
 // deltaT is time in seconds since the last simulation step
 VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 {
-  //try reading com port here
+	//try reading com port here
 
 	if (serial.IsOpen())
 	{
@@ -335,10 +371,8 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 				lLastError = serial.Read(szBuffer, sizeof(szBuffer)-1, &dwBytesRead);
 				if (lLastError != ERROR_SUCCESS)
 				{
-			 
-				printf("\nUnable to read from COM-port. %s ###\n", serial.GetLastError());
-
-			}
+					printf("\nUnable to read from COM-port. %s ###\n", serial.GetLastError());
+				}
 
 				if (dwBytesRead > 0)
 				{
@@ -346,29 +380,25 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 					szBuffer[dwBytesRead] = '\0';
 
 					if (_stricmp("<", szBuffer) == 0)
-<<<<<<< HEAD
-=======
-					{						
+
+					{
 						synced = true;
 					};
- 
+
 					if ((_stricmp("<", szBuffer) == 0) || (_stricmp(">", szBuffer) == 0) || (_stricmp(",", szBuffer) == 0) || (_stricmp(".", szBuffer) == 0) || (_stricmp("-", szBuffer) == 0) || (_stricmp("1", szBuffer) == 0) || (_stricmp("2", szBuffer) == 0) || (_stricmp("3", szBuffer) == 0) || (_stricmp("4", szBuffer) == 0) || (_stricmp("5", szBuffer) == 0) || (_stricmp("6", szBuffer) == 0) || (_stricmp("7", szBuffer) == 0) || (_stricmp("8", szBuffer) == 0) || (_stricmp("9", szBuffer) == 0) || (_stricmp("0", szBuffer) == 0) && (synced == true))
 					{
-
-						//add ">" to dataString
+						//add ">" to dataString 
 						dataString += szBuffer;
-
 						if ((_stricmp(">", szBuffer) == 0))
 						{
-							// end of packet
+							// end of packet 
 							synced = false;
 
 							vector<string> x = split(dataString, ',');
-
-							if (x.size() > 9 )
+							if (x.size() > 9)
 							{
-
-								try {
+								try
+								{
 									X = stof(x[1]);
 									Y = stof(x[2]);
 									Z = stof(x[3]);
@@ -380,77 +410,19 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 									Calibrating = stoi(x[9]);
 								}
 								catch (...) {
-
 								};
-								cout << "dataString X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
+								cout << "dataString Output X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
 							}
-
-							
-
 							dataString.clear();
 						};
-
 					}
-
-
->>>>>>> origin/master
-
-
-						 {
-						synced = true;
-						};
-
-
-
-					if ((_stricmp("<", szBuffer) == 0) || (_stricmp(">", szBuffer) == 0) || (_stricmp(",", szBuffer) == 0) || (_stricmp(".", szBuffer) == 0) || (_stricmp("-", szBuffer) == 0) || (_stricmp("1", szBuffer) == 0) || (_stricmp("2", szBuffer) == 0) || (_stricmp("3", szBuffer) == 0) || (_stricmp("4", szBuffer) == 0) || (_stricmp("5", szBuffer) == 0) || (_stricmp("6", szBuffer) == 0) || (_stricmp("7", szBuffer) == 0) || (_stricmp("8", szBuffer) == 0) || (_stricmp("9", szBuffer) == 0) || (_stricmp("0", szBuffer) == 0) && (synced == true))
-						 {
-													//add ">" to dataString 
-							dataString += szBuffer;
-							if ((_stricmp(">", szBuffer) == 0))
-							 {
-								// end of packet 
-								synced = false;
-
-								vector<string> x = split(dataString, ',');
-								if (x.size() > 9)
-								{
-									try 
-									{
-
-									X = stof(x[1]);
-									Y = stof(x[2]);
-									Z = stof(x[3]);
-									B1 = stoi(x[4]);
-									B2 = stoi(x[5]);
-									B3 = stoi(x[6]);
-									B4 = stoi(x[7]);
-									B5 = stoi(x[8]);
-									Calibrating = stoi(x[9]);
-									}
-									catch (...) {
-									};
-
-									cout << "dataString Output X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
-
-								}
-
-								dataString.clear();
-							};
-
-							}
-	
 				}
 			} while (dwBytesRead == sizeof(szBuffer)-1);
 		}
 	}
-
-
-
-
-
-	}
-  
+}
  
+
 
 // This function will be executed every time the script in the engine calls the script function "pluginFunction"
 // We can be sure in this function the ExecuteCommand registering was already done.
@@ -466,10 +438,11 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 	static const char cmdB3[] = "B3";
 	static const char cmdB4[] = "B4";
 	static const char cmdB5[] = "B5";
-	
 	static const char cmdCONNECT[] = "CONNECT";	//show the GUI window
 	static const char cmdDISCONNECT[] = "DISCONNECT";	//show the GUI window
 	static const char cmdCALIBRATE[] = "CALIBRATE";	//show the GUI window
+
+
 
 	// _strnicmp returns 0 (which is TRUE when using this command) if strings X == Y up to the character length of X, so Toss==Toss, Toss==Tossy, etc.
 	if (_strnicmp(input, cmdX, strlen(cmdX)) == 0) return sendX(&input[strlen(cmdX)]);
@@ -494,30 +467,30 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 // DllMain
 BOOL WINAPI DllMain(HINSTANCE hDll, DWORD fdwReason, LPVOID lpvReserved)
 {
-   switch(fdwReason)
-   {
-   case DLL_PROCESS_ATTACH:
-   {
- 
-							  AllocConsole();
-							  freopen("CONOUT$", "w", stdout);
+	switch (fdwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+	{
 
-							  
-							 
-							
+							   AllocConsole();
+							   freopen("CONOUT$", "w", stdout);
 
-   }
-         OutputDebugString("Called DllMain with DLL_PROCESS_ATTACH\n");
-         break;
-      case DLL_PROCESS_DETACH:
-         OutputDebugString("Called DllMain with DLL_PROCESS_DETACH\n");
-         break;
-      case DLL_THREAD_ATTACH:
-         OutputDebugString("Called DllMain with DLL_THREAD_ATTACH\n");
-         break;
-      case DLL_THREAD_DETACH:
-         OutputDebugString("Called DllMain with DLL_THREAD_DETACH\n");
-         break;
-   }
-   return TRUE;
+
+
+
+
+	}
+		OutputDebugString("Called DllMain with DLL_PROCESS_ATTACH\n");
+		break;
+	case DLL_PROCESS_DETACH:
+		OutputDebugString("Called DllMain with DLL_PROCESS_DETACH\n");
+		break;
+	case DLL_THREAD_ATTACH:
+		OutputDebugString("Called DllMain with DLL_THREAD_ATTACH\n");
+		break;
+	case DLL_THREAD_DETACH:
+		OutputDebugString("Called DllMain with DLL_THREAD_DETACH\n");
+		break;
+	}
+	return TRUE;
 }

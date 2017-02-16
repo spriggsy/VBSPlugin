@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="Serial\Serial.cpp" />
     <ClCompile Include="VBSPlugin.cpp" />
+    <ClCompile Include="whereami.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="VBSPlugin.def" />
@@ -145,6 +146,7 @@
     <ClInclude Include="Serial\Serial.h" />
     <ClInclude Include="SimpleIni.h" />
     <ClInclude Include="VBSPlugin.h" />
+    <ClInclude Include="whereami.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
