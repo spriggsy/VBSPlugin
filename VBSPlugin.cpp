@@ -1,9 +1,7 @@
 #include <windows.h>
 #include "VBSPlugin.h"
-
 #include <tchar.h>
 #include "Serial.h"						//Used fo the Serial port
-
 #include <vector>
 #include <algorithm>					//used for string replace function
 #include <string>
@@ -21,9 +19,7 @@ CSimpleIniA ini;
 
 LONG    lLastError = ERROR_SUCCESS;
 
-
 using namespace std;
-
 
 string dataString;
 string pathString;
@@ -38,6 +34,8 @@ int   Data_Of_Thread_1;
 
 bool connected = false;  //is the 
 
+int AX = 0;
+int AY = 0;
 int B1 = 0;
 int B2 = 0;
 int B3 = 0;
@@ -48,6 +46,8 @@ int Calibrating = 0;     // int sent from head-tracker
 int HEADING_OFF = 0;
 string com;
 int baud;
+
+
 
 //Function to split string at deliminator
 void split(const std::string &s, char delim, std::vector<std::string> &elems) {
@@ -87,10 +87,36 @@ const char *sendX(const char *input)
 	// Return whatever is in the result
 	return result;
 };
+
+const char *sendAX(const char *input)
+{
+	// The output result
+	static char result[128];
+
+	sprintf_s(result, "['%i']", AX);
+
+	// Return whatever is in the result
+	return result;
+};
+
+
+const char *sendAY(const char *input)
+{
+	// The output result
+	static char result[128];
+
+
+	// The output result
+
+	sprintf_s(result, "['%i']", AY);
+
+	// Return whatever is in the result
+	return result;
+};
 const char *sendY(const char *input)
 {
 	// The output result
-	static char result[256];
+	static char result[128];
 
 	sprintf_s(result, "['%f']", Y);
 
@@ -100,7 +126,7 @@ const char *sendY(const char *input)
 const char *sendZ(const char *input)
 {
 	// The output result
-	static char result[256];
+	static char result[128];
 
 	sprintf_s(result, "['%f']", Z);
 
@@ -109,14 +135,11 @@ const char *sendZ(const char *input)
 }
 const char *sendA(const char *input)
 {
-
 	// The output result
 	static char result[128];
 
 	X = X + HEADING_OFF;
 	if (X > 360)  { X = X - 360; };
-
-
 
 	sprintf_s(result, "['%i,%i,%i']", X, Y, Z);
 
@@ -126,7 +149,7 @@ const char *sendA(const char *input)
 const char *sendB1(const char *input)
 {
 	// The output result
-	static char result[512];
+	static char result[128];
 
 	sprintf_s(result, "['%i']", B1);
 
@@ -136,7 +159,7 @@ const char *sendB1(const char *input)
 const char *sendB2(const char *input)
 {
 	// The output result
-	static char result[512];
+	static char result[128];
 
 	sprintf_s(result, "['%i']", B2);
 
@@ -146,7 +169,7 @@ const char *sendB2(const char *input)
 const char *sendB3(const char *input)
 {
 	// The output result
-	static char result[512];
+	static char result[128];
 
 	sprintf_s(result, "['%i']", B3);
 
@@ -156,7 +179,7 @@ const char *sendB3(const char *input)
 const char *sendB4(const char *input)
 {
 	// The output result
-	static char result[512];
+	static char result[128];
 
 	sprintf_s(result, "['%i']", B4);
 
@@ -166,7 +189,7 @@ const char *sendB4(const char *input)
 const char *sendB5(const char *input)
 {
 	// The output result
-	static char result[512];
+	static char result[128];
 
 	sprintf_s(result, "['%i']", B5);
 
@@ -185,26 +208,9 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
 	}
 }
 
-bool replace(std::string& str, const std::string& from, const std::string& to) {
-	size_t start_pos = str.find(from);
-	if (start_pos == std::string::npos)
-		return false;
-	str.replace(start_pos, from.length(), to);
-	return true;
-}
 
-
-const char *CALIBRATE(const char *input)
+void checkIni()
 {
-
-	int nBytesSent = serial.Write("1");  
-
-	// Return whatever is in the result
-	return NULL;
-}
-const char *CONNECT(const char *input)
-{
-
 	//find path of DLL
 	char* path;
 	int length, dirname_length;
@@ -219,12 +225,14 @@ const char *CONNECT(const char *input)
 		string str(path);
 		pathString = str + ".ini";
 		replaceAll(pathString, "\\", "\\\\");
-		cout << pathString << endl;
+
 	}
 
-	if (!std::ifstream(pathString))
+
+	// if the ini file does not exist, create it
+	if (!ifstream(pathString))
 	{
-		// create ini file
+
 		ofstream outfile(pathString.c_str());
 
 		outfile << "[SETTINGS]" << endl;
@@ -235,7 +243,7 @@ const char *CONNECT(const char *input)
 		outfile << "JPAD = 0" << endl;
 		outfile.close();
 	}
- 
+
 	free(path);
 
 	// load settings from ini file
@@ -244,17 +252,41 @@ const char *CONNECT(const char *input)
 	com = ini.GetValue("SETTINGS", "PORT", NULL);
 	baud = atoi(ini.GetValue("SETTINGS", "BAUD", NULL));
 	HEADING_OFF = atoi(ini.GetValue("SETTINGS", "HEADING_OFF", NULL));
+};
+const char *CALIBRATE(const char *input)
+{
+	int nBytesSent = serial.Write("1");  
+	cout << "CALIBRATE" << endl;
+	// Return whatever is in the result
+	return NULL;
+}
 
+const char *CONNECT(const char *input)
+{
+	static char result[128];
+	checkIni();
 
 	// Attempt to open the serial port 
 	lLastError = serial.Open((com.c_str()), 0, 0, false);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to open port: ") << com << endl;
+	{
 
+		sprintf_s(result, "['Unable to open port: %i']", com);
+		
+
+		// Return whatever is in the result
+		return result;
+	};
 	// Setup the serial port (9600,8N1, which is the default setting)
 	lLastError = serial.Setup(CSerial::EBaudrate(baud), CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port baud: ") << baud  << endl;
+	{
+
+		sprintf_s(result, "['Unable to set COM-port baud: %i']", baud);
+
+		// Return whatever is in the result
+		return result;
+	};
 
 	// Register only for the receive event
 	lLastError = serial.SetMask(CSerial::EEventBreak |
@@ -265,23 +297,50 @@ const char *CONNECT(const char *input)
 		CSerial::EEventRLSD |
 		CSerial::EEventRecv);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port event mask") << endl;
+		{
+
+			sprintf_s(result, "['Unable to set COM-port event mask']");
+
+			// Return whatever is in the result
+			return result;
+		};
 
 	// Use 'non-blocking' reads, because we don't know how many bytes
 	// will be received. This is normally the most convenient mode
 	// (and also the default mode for reading data).
 	lLastError = serial.SetupReadTimeouts(CSerial::EReadTimeoutNonblocking);
 	if (lLastError != ERROR_SUCCESS)
-		cout << serial.GetLastError() << " : " << _T("Unable to set COM-port read timeout.") << endl;
+	{
+		sprintf_s(result, "['Unable to set COM-port read timeout.']");
 
+		// Return whatever is in the result
+		return result;
+	};
+
+
+	//check if we managed to connect
+	if (serial.IsOpen() == true)
+	{
+		sprintf_s(result, "['true']");
+		// Return whatever is in the result
+		return result;
+		
+	}
+	else
+	{
+		sprintf_s(result, "['false']");
+		// Return whatever is in the result
+		return result;
+	}
 	return NULL;
 }
 const char *DISCONNECT(const char *input)
 {
-
 	// Close the port again
 	serial.Close();
 	
+	cout << "Disconnected" << endl;
+
 	return NULL;
 }
 // Function that will register the ExecuteCommand function of the engine
@@ -299,65 +358,13 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 
 	if (serial.IsOpen())
 	{
-
 		// Wait for an event
 		lLastError = serial.WaitEvent();
 		if (lLastError != ERROR_SUCCESS){
 
-			printf("\n### Unable to wait for a COM-port event. %s ###\n", serial.GetLastError());
 		}
-
 		// Save event
 		const CSerial::EEvent eEvent = serial.GetEventType();
-
-		// Handle break event
-		if (eEvent & CSerial::EEventBreak)
-		{
-			printf("\n### BREAK received ###\n");
-		}
-
-		// Handle CTS event
-		if (eEvent & CSerial::EEventCTS)
-		{
-			printf("\n### Clear to send %s ###\n", serial.GetCTS() ? "on" : "off");
-		}
-
-		// Handle DSR event
-		if (eEvent & CSerial::EEventDSR)
-		{
-			printf("\n### Data set ready %s ###\n", serial.GetDSR() ? "on" : "off");
-		}
-
-		// Handle error event
-		if (eEvent & CSerial::EEventError)
-		{
-			printf("\n### ERROR: ");
-			switch (serial.GetError())
-			{
-			case CSerial::EErrorBreak:		printf("Break condition");			break;
-			case CSerial::EErrorFrame:		printf("Framing error");			break;
-			case CSerial::EErrorIOE:		printf("IO device error");			break;
-			case CSerial::EErrorMode:		printf("Unsupported mode");			break;
-			case CSerial::EErrorOverrun:	printf("Buffer overrun");			break;
-			case CSerial::EErrorRxOver:		printf("Input buffer overflow");	break;
-			case CSerial::EErrorParity:		printf("Input parity error");		break;
-			case CSerial::EErrorTxFull:		printf("Output buffer full");		break;
-			default:						printf("Unknown");					break;
-			}
-			printf(" ###\n");
-		}
-
-		// Handle ring event
-		if (eEvent & CSerial::EEventRing)
-		{
-			printf("\n### RING ###\n");
-		}
-
-		// Handle RLSD/CD event
-		if (eEvent & CSerial::EEventRLSD)
-		{
-			printf("\n### RLSD/CD %s ###\n", serial.GetRLSD() ? "on" : "off");
-		}
 
 		// Handle data receive event
 		if (eEvent & CSerial::EEventRecv)
@@ -395,23 +402,24 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 							synced = false;
 
 							vector<string> x = split(dataString, ',');
-							if (x.size() > 9)
+							if (x.size() > 11)
 							{
 								try
 								{
 									X = stof(x[1]);
 									Y = stof(x[2]);
 									Z = stof(x[3]);
-									B1 = stoi(x[4]);
-									B2 = stoi(x[5]);
-									B3 = stoi(x[6]);
-									B4 = stoi(x[7]);
-									B5 = stoi(x[8]);
-									Calibrating = stoi(x[9]);
+									AX = stoi(x[4]);
+									AY = stoi(x[5]);
+									B1 = stoi(x[6]);
+									B2 = stoi(x[7]);
+									B3 = stoi(x[8]);
+									B4 = stoi(x[9]);
+									B5 = stoi(x[10]);
+									Calibrating = stoi(x[11]);
 								}
 								catch (...) {
 								};
-								cout << "dataString Output X: " << X << " Y: " << Y << " Z: " << Z << std::endl;
 							}
 							dataString.clear();
 						};
@@ -433,6 +441,8 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 	static const char cmdY[] = "Y";
 	static const char cmdZ[] = "Z";
 	static const char cmdXYZ[] = "A";
+	static const char cmdAX[] = "AX";
+	static const char cmdAY[] = "AY";
 	static const char cmdB1[] = "B1";
 	static const char cmdB2[] = "B2";
 	static const char cmdB3[] = "B3";
@@ -446,6 +456,8 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 
 	// _strnicmp returns 0 (which is TRUE when using this command) if strings X == Y up to the character length of X, so Toss==Toss, Toss==Tossy, etc.
 	if (_strnicmp(input, cmdX, strlen(cmdX)) == 0) return sendX(&input[strlen(cmdX)]);
+	if (_strnicmp(input, cmdAX, strlen(cmdAX)) == 0) return sendAX(&input[strlen(cmdAX)]);
+	if (_strnicmp(input, cmdAY, strlen(cmdAY)) == 0) return sendAY(&input[strlen(cmdAY)]);
 	if (_strnicmp(input, cmdY, strlen(cmdY)) == 0) return sendY(&input[strlen(cmdY)]);
 	if (_strnicmp(input, cmdZ, strlen(cmdZ)) == 0) return sendZ(&input[strlen(cmdZ)]);
 	if (_strnicmp(input, cmdXYZ, strlen(cmdXYZ)) == 0) return sendA(&input[strlen(cmdXYZ)]);
@@ -474,10 +486,6 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD fdwReason, LPVOID lpvReserved)
 
 							   AllocConsole();
 							   freopen("CONOUT$", "w", stdout);
-
-
-
-
 
 	}
 		OutputDebugString("Called DllMain with DLL_PROCESS_ATTACH\n");
