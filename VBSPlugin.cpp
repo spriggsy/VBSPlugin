@@ -1,4 +1,5 @@
 #include <windows.h>
+#include "StdAfx.h"
 #include "VBSPlugin.h"
 #include <tchar.h>
 #include "Serial.h"						//Used fo the Serial port
@@ -10,10 +11,7 @@
 #include <sstream>
 #include <iostream>						// needed for file access/creation
 #include <fstream>
-#include <conio.h>
-#include <stdio.h>
-
-
+ 
 CSerial serial;
 CSimpleIniA ini;
 
@@ -29,9 +27,8 @@ bool calib = false;
 float X = 0.0;
 float Y = 0.0;
 float Z = 0.0;
-
-int   Data_Of_Thread_1;
-
+int bty = 100;
+ 
 bool connected = false;  //is the 
 
 int AX = 0;
@@ -98,8 +95,6 @@ const char *sendAX(const char *input)
 	// Return whatever is in the result
 	return result;
 };
-
-
 const char *sendAY(const char *input)
 {
 	// The output result
@@ -141,7 +136,7 @@ const char *sendA(const char *input)
 	X = X + HEADING_OFF;
 	if (X > 360)  { X = X - 360; };
 
-	sprintf_s(result, "['%i,%i,%i']", X, Y, Z);
+	sprintf_s(result, "['%f,%f,%f']", X, Y, Z);
 
 	// Return whatever is in the result
 	return result;
@@ -267,13 +262,14 @@ const char *CONNECT(const char *input)
 	checkIni();
 
 	// Attempt to open the serial port 
-	lLastError = serial.Open((com.c_str()), 0, 0, false);
+	// Add "\\\\.\\" to the beginning of the read com port from the ini file,
+	//	this allows the plugin to use com ports greater than 9
+	string preTxt = "\\\\.\\";
+	string port = preTxt + com;
+	lLastError = serial.Open((preTxt.c_str()), 0, 0, false);
 	if (lLastError != ERROR_SUCCESS)
 	{
-
-		sprintf_s(result, "['Unable to open port: %i']", com);
-		
-
+ 	 
 		// Return whatever is in the result
 		return result;
 	};
@@ -281,9 +277,7 @@ const char *CONNECT(const char *input)
 	lLastError = serial.Setup(CSerial::EBaudrate(baud), CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
 	if (lLastError != ERROR_SUCCESS)
 	{
-
-		sprintf_s(result, "['Unable to set COM-port baud: %i']", baud);
-
+ 
 		// Return whatever is in the result
 		return result;
 	};
@@ -336,13 +330,65 @@ const char *CONNECT(const char *input)
 }
 const char *DISCONNECT(const char *input)
 {
+	static char result[128];
 	// Close the port again
 	serial.Close();
 	
-	cout << "Disconnected" << endl;
+	if (serial.IsOpen() == true)
+	{
+		sprintf_s(result, "['false']");
+		// Return whatever is in the result
+		return result;
+
+	}
+	else
+	{
+		sprintf_s(result, "['true']");
+		// Return whatever is in the result
+		return result;
+	}
+	return NULL;
 
 	return NULL;
 }
+
+const char *sendCHK(const char *input)
+{
+	// The output result
+	static char result[128];
+
+	if (serial.IsOpen() == true)
+	{
+		sprintf_s(result, "['false']");
+		// Return whatever is in the result
+		return result;
+
+	}
+	else
+	{
+		sprintf_s(result, "['true']");
+		// Return whatever is in the result
+		return result;
+	}
+	return NULL;
+
+	// Return whatever is in the result
+	return result;
+}
+
+
+const char *sendBTY(const char *input)
+{
+	// The output result
+	static char result[128];
+
+	sprintf_s(result, "['%i']", bty);
+
+	// Return whatever is in the result
+	return result;
+}
+
+
 // Function that will register the ExecuteCommand function of the engine
 VBSPLUGIN_EXPORT void WINAPI RegisterCommandFnc(void *executeCommandFnc)
 {
@@ -378,8 +424,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 				lLastError = serial.Read(szBuffer, sizeof(szBuffer)-1, &dwBytesRead);
 				if (lLastError != ERROR_SUCCESS)
 				{
-					printf("\nUnable to read from COM-port. %s ###\n", serial.GetLastError());
-				}
+ 				}
 
 				if (dwBytesRead > 0)
 				{
@@ -402,7 +447,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 							synced = false;
 
 							vector<string> x = split(dataString, ',');
-							if (x.size() > 11)
+							if (x.size() > 12)
 							{
 								try
 								{
@@ -416,7 +461,8 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 									B3 = stoi(x[8]);
 									B4 = stoi(x[9]);
 									B5 = stoi(x[10]);
-									Calibrating = stoi(x[11]);
+									bty = stoi(x[11]);
+									Calibrating = stoi(x[12]);
 								}
 								catch (...) {
 								};
@@ -448,10 +494,11 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 	static const char cmdB3[] = "B3";
 	static const char cmdB4[] = "B4";
 	static const char cmdB5[] = "B5";
-	static const char cmdCONNECT[] = "CONNECT";	//show the GUI window
-	static const char cmdDISCONNECT[] = "DISCONNECT";	//show the GUI window
-	static const char cmdCALIBRATE[] = "CALIBRATE";	//show the GUI window
-
+	static const char cmdCONNECT[] = "CONNECT";	 
+	static const char cmdDISCONNECT[] = "DISCONNECT";	 
+	static const char cmdCALIBRATE[] = "CALIBRATE";	
+	static const char cmdCHK[] = "CHK";
+	static const char cmdBTY[] = "BTY";
 
 
 	// _strnicmp returns 0 (which is TRUE when using this command) if strings X == Y up to the character length of X, so Toss==Toss, Toss==Tossy, etc.
@@ -469,9 +516,12 @@ VBSPLUGIN_EXPORT const char* WINAPI PluginFunction(const char *input)
 	if (_strnicmp(input, cmdCONNECT, strlen(cmdCONNECT)) == 0) return CONNECT(&input[strlen(cmdCONNECT)]);
 	if (_strnicmp(input, cmdDISCONNECT, strlen(cmdDISCONNECT)) == 0) return DISCONNECT(&input[strlen(cmdDISCONNECT)]);
 	if (_strnicmp(input, cmdCALIBRATE, strlen(cmdCALIBRATE)) == 0) return CALIBRATE(&input[strlen(cmdCALIBRATE)]);
+	if (_strnicmp(input, cmdCHK, strlen(cmdCHK)) == 0) return sendCHK(&input[strlen(cmdCHK)]);
+
+	if (_strnicmp(input, cmdBTY, strlen(cmdBTY)) == 0) return sendBTY(&input[strlen(cmdBTY)]);
 
 	// Report error; should return in VBS2 as ["{error} Unrecognized command"] -- string in an array
-	static const char err[] = "['Unrecognized command Use X,Y,Z,B1,B2,B3,B4,B5,A,CONNECT']";
+	static const char err[] = "['Unrecognized command Use X,Y,Z,B1,B2,B3,B4,B5,A,CONNECT,DISCONNECT,BTY']";
 
 	return err;
 }
@@ -482,12 +532,6 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD fdwReason, LPVOID lpvReserved)
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-	{
-
-							   AllocConsole();
-							   freopen("CONOUT$", "w", stdout);
-
-	}
 		OutputDebugString("Called DllMain with DLL_PROCESS_ATTACH\n");
 		break;
 	case DLL_PROCESS_DETACH:
