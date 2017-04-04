@@ -27,7 +27,7 @@ bool calib = false;
 float X = 0.0;
 float Y = 0.0;
 float Z = 0.0;
-int bty = 100;
+float bty = 100.0;
  
 bool connected = false;  //is the 
 
@@ -264,12 +264,13 @@ const char *CONNECT(const char *input)
 	// Attempt to open the serial port 
 	// Add "\\\\.\\" to the beginning of the read com port from the ini file,
 	//	this allows the plugin to use com ports greater than 9
-	string preTxt = "\\\\.\\";
-	string port = preTxt + com;
-	lLastError = serial.Open((preTxt.c_str()), 0, 0, false);
+	//string preTxt = "\\\\.\\";
+	//string port = preTxt + com;
+	lLastError = serial.Open((com.c_str()), 0, 0, false);
+	//lLastError = serial.Open((preTxt.c_str()), 0, 0, false);
 	if (lLastError != ERROR_SUCCESS)
 	{
- 	 
+		sprintf_s(result, "['Unable to open port %s']",com.c_str());
 		// Return whatever is in the result
 		return result;
 	};
@@ -277,7 +278,8 @@ const char *CONNECT(const char *input)
 	lLastError = serial.Setup(CSerial::EBaudrate(baud), CSerial::EData8, CSerial::EParNone, CSerial::EStop1);
 	if (lLastError != ERROR_SUCCESS)
 	{
- 
+		sprintf_s(result, "['Unable to set Baud rate']");
+
 		// Return whatever is in the result
 		return result;
 	};
@@ -349,7 +351,7 @@ const char *DISCONNECT(const char *input)
 	}
 	return NULL;
 
-	return NULL;
+ 
 }
 
 const char *sendCHK(const char *input)
@@ -359,14 +361,14 @@ const char *sendCHK(const char *input)
 
 	if (serial.IsOpen() == true)
 	{
-		sprintf_s(result, "['false']");
+		sprintf_s(result, "['true']");
 		// Return whatever is in the result
 		return result;
 
 	}
 	else
 	{
-		sprintf_s(result, "['true']");
+		sprintf_s(result, "['false']");
 		// Return whatever is in the result
 		return result;
 	}
@@ -380,9 +382,9 @@ const char *sendCHK(const char *input)
 const char *sendBTY(const char *input)
 {
 	// The output result
-	static char result[128];
+	static char result[56];
 
-	sprintf_s(result, "['%i']", bty);
+	sprintf_s(result, "['%f']", bty);
 
 	// Return whatever is in the result
 	return result;
@@ -461,7 +463,7 @@ VBSPLUGIN_EXPORT void WINAPI OnSimulationStep(float deltaT)
 									B3 = stoi(x[8]);
 									B4 = stoi(x[9]);
 									B5 = stoi(x[10]);
-									bty = stoi(x[11]);
+									bty = stof(x[11]);
 									Calibrating = stoi(x[12]);
 								}
 								catch (...) {
